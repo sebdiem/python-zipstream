@@ -14,10 +14,19 @@ the zip archive. For example, the following code snippet would write a zip
 archive containing files from 'path' to a normal file:
 
 ```python
-zf = open('zipfile.zip', 'wb')
-for data in zipstream.ZipFile(path):
-    zf.write(data)
-zf.close()
+import zipstream
+
+path = 'path/to/my/file/or/path/to/my/directory'
+
+# create the stream:
+zstream = zipstream.ZipFile()
+zstream.write(path, arcname='my_zip')
+
+# then you can send it over the network or
+# write it to the disk chunk by chunk:
+with open('zipfile.zip', 'wb') as zf:
+    for data in zstream:
+        zf.write(data)
 ```
 
 zipstream also allows to take as input a byte string iterable and to generate
@@ -26,27 +35,46 @@ This avoids storing large files on disk or in memory.
 To do so you could use something like this snippet:
 
 ```python
+import zipstream
+
 def iterable():
     for _ in xrange(10):
+        # more realistically, you can yield a db query here:
         yield b'this is a byte string\x01\n'
 
-zf = open('zipfile.zip', 'wb')
-zf.write_iter('my_archive_name', iterable())
-zf.close()
+# create the stream:
+zstream = zipstream.ZipFile()
+zstream.write_iter(iterable(), arcname='my_zip')
+
+# then you can send it over the network or
+# write it to the disk chunk by chunk:
+with open('zipfile.zip', 'wb') as zf:
+    for data in zstream:
+        zf.write(data)
 ```
 
 Of course both approach can be combined:
 
 ```python
+import zipstream
+
 def iterable():
     for _ in xrange(10):
         yield b'this is a byte string\x01\n'
 
-zf = open('zipfile.zip', 'wb')
-zf.write_iter('my_archive_name', iterable())
-for data in zipstream.ZipFile(path):
-    zf.write(data)
-zf.close()
+path = 'path/to/my/file'
+
+# create the stream:
+zstream = zipstream.ZipFile()
+# write a file
+zstream.write(path, arcname='my_zip/a/file')
+zstream.write_iter(iterable(), arcname='my_zip/a/stream')
+
+# then you can send it over the network or
+# write it to the disk chunk by chunk:
+with open('zipfile.zip', 'wb') as zf:
+    for data in zstream:
+        zf.write(data)
 ```
 
 Since recent versions of web.py support returning iterators of strings to be
@@ -60,7 +88,9 @@ def GET(self):
     web.header('Content-type' , 'application/zip')
     web.header('Content-Disposition', 'attachment; filename="%s"' % (
         zip_filename,))
-    return zipstream.ZipFile(path)
+    zstream = zipstream.ZipFile()
+    zstream.write(path)
+    return zstream
 ```
 
 If the zlib module is available, zipstream.ZipFile can generate compressed zip
@@ -126,7 +156,9 @@ def GET(self):
     web.header('Content-type' , 'application/zip')
     web.header('Content-Disposition', 'attachment; filename="%s"' % (
         zip_filename,))
-    return zipstream.ZipFile(path)
+    z = zipstream.ZipFile(mode='w', compression=ZIP_DEFLATED)
+    z.write(path)
+@
 ```
 
 ## Running tests

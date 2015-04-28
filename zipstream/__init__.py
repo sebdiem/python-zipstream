@@ -200,14 +200,25 @@ class ZipFile(zipfile.ZipFile):
         self._comment = comment
         self._didModify = True
 
-    def write(self, filename, arcname=None, compress_type=None):
-        # TODO: Reflect python's Zipfile.write
-        #   - if filename is file, write as file
-        #   - if filename is directory, write an empty directory
-        kwargs = {'filename': filename, 'arcname': arcname, 'compress_type': compress_type}
-        self.paths_to_write.append(kwargs)
+    def write(self, path, arcname=None, compress_type=None):
+        if os.path.isdir(path):
+            base_path = arcname if arcname else os.path.splitdrive(path)[1]
+            for dirname, _dirs, files in os.walk(path):
+                for f in files:
+                    rel_dirname = os.path.abspath(dirname)[len(os.path.abspath(path)):]
+                    self.paths_to_write.append({
+                        'filename': os.path.join(dirname, f),
+                        'arcname': os.path.join(base_path, rel_dirname, f),
+                        'compress_type': compress_type,
+                    })
+        else:
+            self.paths_to_write.append({
+                'filename': path,
+                'arcname': arcname,
+                'compress_type': compress_type,
+            })
 
-    def write_iter(self, arcname, iterable, compress_type=None):
+    def write_iter(self, iterable, arcname, compress_type=None):
         """Write the bytes iterable `iterable` to the archive under the name `arcname`."""
         kwargs = {'arcname': arcname, 'iterable': iterable, 'compress_type': compress_type}
         self.paths_to_write.append(kwargs)

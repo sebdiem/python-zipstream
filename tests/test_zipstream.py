@@ -2,6 +2,7 @@
 from __future__ import unicode_literals, print_function
 
 import os
+import shutil
 import tempfile
 import unittest
 import zipstream
@@ -14,15 +15,14 @@ class ZipInfoTestCase(unittest.TestCase):
 
 class ZipStreamTestCase(unittest.TestCase):
     def setUp(self):
+        self.tempdir = tempfile.mkdtemp('tempdir')
         self.fileobjs = [
-            tempfile.NamedTemporaryFile(delete=False, suffix='.txt'),
-            tempfile.NamedTemporaryFile(delete=False, suffix='.py'),
+            tempfile.NamedTemporaryFile(delete=False, suffix='.txt', dir=self.tempdir),
+            tempfile.NamedTemporaryFile(delete=False, suffix='.py', dir=self.tempdir),
         ]
 
     def tearDown(self):
-        for fileobj in self.fileobjs:
-            fileobj.close()
-            os.remove(fileobj.name)
+        shutil.rmtree(self.tempdir)
 
     def test_init_no_args(self):
         zipstream.ZipFile()
@@ -52,6 +52,19 @@ class ZipStreamTestCase(unittest.TestCase):
         z2 = zipfile.ZipFile(f.name, 'r')
         self.assertFalse(z2.testzip())
 
+        os.remove(f.name)
+
+    def test_write_directory(self):
+        z = zipstream.ZipFile(mode='w')
+        z.write(self.tempdir, arcname='test')
+
+        f = tempfile.NamedTemporaryFile(suffix='zip', delete=False)
+        for chunk in z:
+            f.write(chunk)
+        f.close()
+
+        z2 = zipfile.ZipFile(f.name, 'r')
+        self.assertFalse(z2.testzip())
         os.remove(f.name)
 
     def test_write_iterable(self):

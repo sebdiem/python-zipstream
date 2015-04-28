@@ -14,6 +14,8 @@ with zipstream.ZipFile(mode='w', compression=zipstream.ZIP_DEFLATED) as z:
             path = os.path.join(root, filename)
             z.write(path, path)
 
+    z.write('tests')
+
     with open('test.zip', 'wb') as f:
         for chunk in z:
             f.write(chunk)
